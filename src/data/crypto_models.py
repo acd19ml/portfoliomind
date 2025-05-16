@@ -28,8 +28,8 @@ class CryptoCoin(BaseModel):
     price_btc: Optional[Decimal] = None
     volume_24h: Optional[Decimal] = None
     volatility: Optional[Decimal] = None
-    circulating_supply: Optional[int] = None
-    max_supply: Optional[int] = None
+    circulating_supply: Optional[Decimal] = None
+    max_supply: Optional[Decimal] = None
     percent_change_1h: Optional[Decimal] = None
     percent_change_24h: Optional[Decimal] = None
     percent_change_7d: Optional[Decimal] = None
@@ -41,8 +41,8 @@ class CryptoCoin(BaseModel):
     social_dominance: Optional[Decimal] = None
     market_dominance: Optional[Decimal] = None
     market_dominance_prev: Optional[Decimal] = None
-    galaxy_score: Optional[int] = None
-    galaxy_score_previous: Optional[int] = None
+    galaxy_score: Optional[float] = None
+    galaxy_score_previous: Optional[float] = None
     alt_rank: Optional[int] = None
     alt_rank_previous: Optional[int] = None
     sentiment: Optional[int] = None

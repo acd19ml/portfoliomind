@@ -21,19 +21,25 @@ def print_trading_output(result: dict) -> None:
     Args:
         result (dict): Dictionary containing decisions and analyst signals for cryptocurrencies
     """
-    decisions = result.get("decisions")
-    if not decisions:
-        print(f"{Fore.RED}No trading decisions available{Style.RESET_ALL}")
+    # Check if we have any analyst signals
+    analyst_signals = result.get("analyst_signals", {})
+    if not analyst_signals:
+        print(f"{Fore.RED}No analysis results available{Style.RESET_ALL}")
         return
 
-    # Print decisions for each crypto
-    for crypto, decision in decisions.items():
+    # Get all cryptocurrencies from analyst signals
+    cryptos = set()
+    for signals in analyst_signals.values():
+        cryptos.update(signals.keys())
+
+    # Print analysis for each crypto
+    for crypto in cryptos:
         print(f"\n{Fore.WHITE}{Style.BRIGHT}Analysis for {Fore.CYAN}{crypto}{Style.RESET_ALL}")
         print(f"{Fore.WHITE}{Style.BRIGHT}{'=' * 50}{Style.RESET_ALL}")
 
         # Prepare analyst signals table for this crypto
         table_data = []
-        for agent, signals in result.get("analyst_signals", {}).items():
+        for agent, signals in analyst_signals.items():
             if crypto not in signals:
                 continue
                 
