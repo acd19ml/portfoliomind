@@ -115,9 +115,6 @@ def predict_from_coin_data(coins: List) -> pd.DataFrame:
     print("\nModel feature names:")
     print(model_feature_names[:10], "...")  # Print first 10 features
     
-    # Create a template DataFrame with all expected features set to 0
-    template_df = pd.DataFrame(0, index=df.index, columns=model_feature_names)
-    
     # === 4. 独热编码 symbol ===
     # First, get the unique symbols from the model's feature names
     model_symbols = set()
@@ -137,17 +134,21 @@ def predict_from_coin_data(coins: List) -> pd.DataFrame:
     # Drop the original symbol column
     df = df.drop('symbol', axis=1)
     
-    # Combine all features at once using pd.concat
-    numeric_features = df.copy()
-    template_df = pd.concat([numeric_features, symbol_dummies], axis=1)
+    # Create a dictionary of all features with default values
+    feature_dict = {col: 0 for col in model_feature_names}
     
-    # Ensure all model features are present
-    for col in model_feature_names:
-        if col not in template_df.columns:
-            template_df[col] = 0
+    # Update the dictionary with actual values from numeric features
+    for col in df.columns:
+        if col in model_feature_names:
+            feature_dict[col] = df[col].values
     
-    # Reorder columns to match model features
-    template_df = template_df[model_feature_names]
+    # Update the dictionary with one-hot encoded symbol values
+    for col in symbol_dummies.columns:
+        if col in model_feature_names:
+            feature_dict[col] = symbol_dummies[col].values
+    
+    # Create the final DataFrame using pd.concat
+    template_df = pd.DataFrame(feature_dict, index=df.index)
     
     print(f"\nFinal feature count: {len(template_df.columns)}")
     print("\nInput symbols:")

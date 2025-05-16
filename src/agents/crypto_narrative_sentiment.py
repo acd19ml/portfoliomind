@@ -30,12 +30,12 @@ def crypto_narrative_agent(state: AgentState):
     analysis_data = {}
     narrative_analysis = {}
 
-    # Get all coins data
+    # Get only the specified coins data
     progress.update_status("crypto_narrative_agent", None, "Fetching cryptocurrency data")
-    coins = get_coins()
-    print(f"Fetched {len(coins)} coins")
+    coins = get_coins(symbols)  # 只获取指定的币种数据
+    print(f"Fetched {len(coins)} coins for analysis")
 
-    # Get model predictions for all coins
+    # Get model predictions for the specified coins
     progress.update_status("crypto_narrative_agent", None, "Running ML model predictions")
     predictions_df = predict_from_coin_data(coins)
     print(f"\nPredictions DataFrame shape: {predictions_df.shape}")
