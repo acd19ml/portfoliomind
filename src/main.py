@@ -1,0 +1,181 @@
+import sys
+
+from dotenv import load_dotenv
+from langchain_core.messages import HumanMessage
+from langgraph.graph import END, StateGraph
+from colorama import Fore, Style, init
+import questionary
+from src.graph.state import AgentState
+from src.utils.display import print_trading_output
+from src.utils.analysts import ANALYST_ORDER, get_analyst_nodes
+from src.utils.progress import progress
+from src.llm.models import LLM_ORDER, get_model_info
+
+import argparse
+from src.utils.visualize import save_graph_as_png
+import json
+
+# Load environment variables from .env file
+load_dotenv()
+
+init(autoreset=True)
+
+
+##### Run the Hedge Fund #####
+def run_portfoliomind(
+    cryptos: list[str],
+    show_reasoning: bool = False,
+    selected_analysts: list[str] = [],
+    model_name: str = "gpt-4o",
+    model_provider: str = "OpenAI",
+):
+    # Start progress tracking
+    progress.start()
+
+    try:
+        # Create a new workflow if analysts are customized
+        if selected_analysts:
+            workflow = create_workflow(selected_analysts)
+            agent = workflow.compile()
+        else:
+            agent = app
+
+        final_state = agent.invoke(
+            {
+                "messages": [
+                    HumanMessage(
+                        content="Make trading decisions based on the provided data.",
+                    )
+                ],
+                "data": {
+                    "symbols": cryptos,
+                    "analyst_signals": {},
+                },
+                "metadata": {
+                    "show_reasoning": show_reasoning,
+                    "model_name": model_name,
+                    "model_provider": model_provider,
+                },
+            },
+        )
+
+        return {
+            "analyst_signals": final_state["data"]["analyst_signals"],
+        }
+    finally:
+        # Stop progress tracking
+        progress.stop()
+
+
+def start(state: AgentState):
+    """Initialize the workflow with the input message."""
+    return state
+
+
+def create_workflow(selected_analysts=None):
+    """Create the workflow with selected analysts."""
+    workflow = StateGraph(AgentState)
+    workflow.add_node("start_node", start)
+
+    # Get analyst nodes from the configuration
+    analyst_nodes = get_analyst_nodes()
+
+    # Default to all analysts if none selected
+    if selected_analysts is None:
+        selected_analysts = list(analyst_nodes.keys())
+    # Add selected analyst nodes
+    for analyst_key in selected_analysts:
+        node_name, node_func = analyst_nodes[analyst_key]
+        workflow.add_node(node_name, node_func)
+        workflow.add_edge("start_node", node_name)
+
+    workflow.set_entry_point("start_node")
+    return workflow
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Run the hedge fund trading system")
+    parser.add_argument("--cryptos", type=str, required=True, help="Comma-separated list of crypto symbols")
+    parser.add_argument("--show-reasoning", action="store_true", help="Show reasoning from each agent")
+    parser.add_argument("--show-agent-graph", action="store_true", help="Show the agent graph")
+
+    args = parser.parse_args()
+
+    # Parse cryptos from comma-separated string
+    cryptos = [crypto.strip() for crypto in args.cryptos.split(",")]
+
+    # Select analysts
+    selected_analysts = None
+    choices = questionary.checkbox(
+        "Select your AI analysts.",
+        choices=[questionary.Choice(display, value=value) for display, value in ANALYST_ORDER],
+        instruction="\n\nInstructions: \n1. Press Space to select/unselect analysts.\n2. Press 'a' to select/unselect all.\n3. Press Enter when done to run the hedge fund.\n",
+        validate=lambda x: len(x) > 0 or "You must select at least one analyst.",
+        style=questionary.Style(
+            [
+                ("checkbox-selected", "fg:green"),
+                ("selected", "fg:green noinherit"),
+                ("highlighted", "noinherit"),
+                ("pointer", "noinherit"),
+            ]
+        ),
+    ).ask()
+
+    if not choices:
+        print("\n\nInterrupt received. Exiting...")
+        sys.exit(0)
+    else:
+        selected_analysts = choices
+        print(f"\nSelected analysts: " f"{', '.join(Fore.GREEN + choice.title().replace('_', ' ') + Style.RESET_ALL for choice in choices)}")
+
+    # Select LLM model
+    model_choice = questionary.select(
+        "Select your LLM model:",
+        choices=[questionary.Choice(display, value=value) for display, value, _ in LLM_ORDER],
+        style=questionary.Style(
+            [
+                ("selected", "fg:green bold"),
+                ("pointer", "fg:green bold"),
+                ("highlighted", "fg:green"),
+                ("answer", "fg:green bold"),
+            ]
+        ),
+    ).ask()
+
+    if not model_choice:
+        print("\n\nInterrupt received. Exiting...")
+        sys.exit(0)
+    else:
+        model_info = get_model_info(model_choice)
+        if model_info:
+            model_provider = model_info.provider.value
+            print(f"\nSelected {Fore.CYAN}{model_provider}{Style.RESET_ALL} model: {Fore.GREEN + Style.BRIGHT}{model_choice}{Style.RESET_ALL}\n")
+        else:
+            model_provider = "Unknown"
+            print(f"\nSelected model: {Fore.GREEN + Style.BRIGHT}{model_choice}{Style.RESET_ALL}\n")
+
+    # Create the workflow with selected analysts
+    workflow = create_workflow(selected_analysts)
+    app = workflow.compile()
+
+    if args.show_agent_graph:
+        file_path = ""
+        if selected_analysts is not None:
+            for selected_analyst in selected_analysts:
+                file_path += selected_analyst + "_"
+            file_path += "graph.png"
+        save_graph_as_png(app, file_path)
+
+
+
+    # Run the hedge fund
+    result = run_portfoliomind(
+        cryptos=cryptos,
+        show_reasoning=args.show_reasoning,
+        selected_analysts=selected_analysts,
+        model_name=model_choice,
+        model_provider=model_provider,
+    )
+
+    # Print the results
+    print_trading_output(result)
