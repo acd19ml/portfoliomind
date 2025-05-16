@@ -1,6 +1,6 @@
-# AI Hedge Fund
+# Portfoliomind
 
-An AI-powered hedge fund that uses multiple LLM agents to analyze and trade stocks.
+AI-Agents that uses multiple LLM agents to analyze and trade crypto.
 
 ## Features
 
