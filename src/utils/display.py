@@ -21,8 +21,17 @@ def print_trading_output(result: dict) -> None:
     Args:
         result (dict): Dictionary containing decisions and analyst signals for cryptocurrencies
     """
-    # Check if we have any analyst signals
-    analyst_signals = result.get("analyst_signals", {})
+    # Handle both direct dictionary and Queue result
+    if hasattr(result, 'get'):
+        analyst_signals = result.get("analyst_signals", {})
+    else:
+        # If result is not a dictionary, try to get the data from it
+        try:
+            analyst_signals = result["analyst_signals"]
+        except (KeyError, TypeError):
+            print(f"{Fore.RED}Invalid result format{Style.RESET_ALL}")
+            return
+
     if not analyst_signals:
         print(f"{Fore.RED}No analysis results available{Style.RESET_ALL}")
         return
@@ -96,7 +105,7 @@ def print_trading_output(result: dict) -> None:
                 [
                     f"{Fore.CYAN}{agent_name}{Style.RESET_ALL}",
                     f"{signal_color}{signal_type}{Style.RESET_ALL}",
-                    f"{Fore.WHITE}{confidence}%{Style.RESET_ALL}",
+                    f"{Fore.WHITE}{confidence}{Style.RESET_ALL}",
                     f"{Fore.WHITE}{reasoning_str}{Style.RESET_ALL}",
                 ]
             )

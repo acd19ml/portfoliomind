@@ -1,10 +1,13 @@
 import sys
+import asyncio
+from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
 from langgraph.graph import END, StateGraph
 from colorama import Fore, Style, init
 import questionary
+# from src.agents.risk_manager import risk_management_agent
 from src.graph.state import AgentState
 from src.utils.display import print_trading_output
 from src.utils.analysts import ANALYST_ORDER, get_analyst_nodes
@@ -28,24 +31,39 @@ def run_portfoliomind(
     selected_analysts: list[str] = [],
     model_name: str = "gpt-4o",
     model_provider: str = "OpenAI",
-):
-    # Start progress tracking
-    progress.start()
+) -> asyncio.Queue:
+    """
+    Runs the portfolio analysis, emitting status updates to an asyncio.Queue.
+    Catches and surfaces any internal exceptions to avoid unhandled TaskGroup errors.
+    """
+    status_queue: asyncio.Queue = asyncio.Queue()
+
+    # 状态更新回调：将每条更新放入队列
+    def status_handler(agent_name: str, crypto: str, status: str):
+        status_queue.put_nowait({
+            "type": "status",
+            "agent": agent_name,
+            "crypto": crypto,
+            "status": status,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+
+    # 注册回调
+    progress.register_handler(status_handler)
 
     try:
-        # Create a new workflow if analysts are customized
-        if selected_analysts:
-            workflow = create_workflow(selected_analysts)
-            agent = workflow.compile()
-        else:
-            agent = app
+        # 启动进度追踪
+        progress.start()
 
-        final_state = agent.invoke(
-            {
+        # 选择分析器工作流
+        workflow = create_workflow(selected_analysts)
+        agent = workflow.compile()
+
+        # 执行分析，并捕获所有内部异步任务异常
+        try:
+            final_state = agent.invoke({
                 "messages": [
-                    HumanMessage(
-                        content="Make trading decisions based on the provided data.",
-                    )
+                    HumanMessage(content="Make trading decisions based on the provided data."),
                 ],
                 "data": {
                     "symbols": cryptos,
@@ -56,15 +74,30 @@ def run_portfoliomind(
                     "model_name": model_name,
                     "model_provider": model_provider,
                 },
-            },
-        )
+            })
 
-        return {
-            "analyst_signals": final_state["data"]["analyst_signals"],
-        }
+        except Exception as invoke_err:
+            # 如果 invoke 过程中有任何子任务抛错，捕获并推送 error 更新
+            status_queue.put_nowait({
+                "type": "error",
+                "data": {"error": f"Analysis failure: {invoke_err}"},
+            })
+            return status_queue
+
+        # 如果 invoke 成功，把最终结果加入队列
+        status_queue.put_nowait({
+            "type": "result",
+            "data": {
+                "analyst_signals": final_state["data"]["analyst_signals"],
+            }
+        })
+
+        return status_queue
+
     finally:
-        # Stop progress tracking
+        # 停止进度并注销回调
         progress.stop()
+        progress.unregister_handler(status_handler)
 
 
 def start(state: AgentState):
@@ -89,8 +122,41 @@ def create_workflow(selected_analysts=None):
         workflow.add_node(node_name, node_func)
         workflow.add_edge("start_node", node_name)
 
+    # Always add risk management
+    # workflow.add_node("risk_management_agent", risk_management_agent)
+
+    # # Connect selected analysts to risk management
+    # for analyst_key in selected_analysts:
+    #     node_name = analyst_nodes[analyst_key][0]
+    #     workflow.add_edge(node_name, "risk_management_agent", END)
+
     workflow.set_entry_point("start_node")
     return workflow
+
+
+async def process_queue(queue):
+    """Process the status queue and print updates."""
+    while True:
+        try:
+            # Get the next update from the queue
+            update = await queue.get()
+            
+            # If it's the final result, print it and exit
+            if update["type"] == "result":
+                print_trading_output(update["data"])
+                break
+                
+            # Otherwise, print the status update
+            print(f"\n{Fore.CYAN}{update['agent']}{Style.RESET_ALL} analyzing {Fore.GREEN}{update['crypto']}{Style.RESET_ALL}: {update['status']}")
+            
+            # Mark the task as done
+            queue.task_done()
+            
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"{Fore.RED}Error processing update: {e}{Style.RESET_ALL}")
+            break
 
 
 if __name__ == "__main__":
@@ -166,10 +232,8 @@ if __name__ == "__main__":
             file_path += "graph.png"
         save_graph_as_png(app, file_path)
 
-
-
     # Run the hedge fund
-    result = run_portfoliomind(
+    queue = run_portfoliomind(
         cryptos=cryptos,
         show_reasoning=args.show_reasoning,
         selected_analysts=selected_analysts,
@@ -177,5 +241,5 @@ if __name__ == "__main__":
         model_provider=model_provider,
     )
 
-    # Print the results
-    print_trading_output(result)
+    # Process the queue and print updates
+    asyncio.run(process_queue(queue))

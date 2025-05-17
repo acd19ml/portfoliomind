@@ -5,6 +5,7 @@ from rich.table import Table
 from rich.style import Style
 from rich.text import Text
 from typing import Dict, Optional, Callable, List
+import asyncio
 
 console = Console()
 
@@ -43,6 +44,10 @@ class AgentProgress:
 
     def update_status(self, agent_name: str, crypto: Optional[str] = None, status: str = ""):
         """Update the status of an agent."""
+        if not self.started:
+            return
+            
+        # 更新状态
         if agent_name not in self.agent_status:
             self.agent_status[agent_name] = {"status": "", "crypto": None}
 
@@ -50,15 +55,16 @@ class AgentProgress:
             self.agent_status[agent_name]["crypto"] = crypto
         if status:
             self.agent_status[agent_name]["status"] = status
+        self.agent_status[agent_name]["timestamp"] = datetime.now(timezone.utc).isoformat()
 
-        # Set the timestamp as UTC datetime
-        timestamp = datetime.now(timezone.utc).isoformat()
-        self.agent_status[agent_name]["timestamp"] = timestamp
-
-        # Notify all registered handlers
+        # 通知所有注册的处理程序
         for handler in self.update_handlers:
-            handler(agent_name, crypto, status, timestamp)
+            try:
+                handler(agent_name, crypto, status)
+            except Exception as e:
+                print(f"Error in handler: {e}")
 
+        # 立即刷新显示
         self._refresh_display()
 
     def get_all_status(self):

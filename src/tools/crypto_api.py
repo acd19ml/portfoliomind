@@ -8,16 +8,16 @@ _cache = get_crypto_cache()
 
 def get_coins(symbols: List[str] = None) -> List:
     """
-    获取加密货币数据
+    get cryptocurrency data
     Args:
-        symbols: 要获取的币种符号列表，如果为None则获取所有币种
+        symbols: list of cryptocurrency symbols to get, if None get all
     Returns:
-        加密货币数据列表
+        list of cryptocurrency data
     """
-    # 获取所有币种数据
+    # get all coins
     all_coins = get_all_coins()
     
-    # 如果指定了symbols，只返回指定的币种
+    # if symbols are specified, return only the specified coins
     if symbols:
         return [coin for coin in all_coins if coin.symbol in symbols]
     

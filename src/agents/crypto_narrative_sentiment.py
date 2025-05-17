@@ -12,8 +12,22 @@ from src.ml.xgboost_pred import predict_from_coin_data
 
 class CryptoNarrativeSignal(BaseModel):
     signal: Literal["bullish", "bearish", "neutral"]
-    confidence: float
+    confidence: Literal["high confidence in price increase", "moderate confidence in price increase", "low confidence in price increase", "no confidence in price increase"]
     reasoning: str
+
+
+def get_confidence_level(confidence: float) -> str:
+    """
+    将数值置信度转换为描述性置信度
+    """
+    if confidence > 0.7:
+        return "high confidence in price increase"
+    elif confidence > 0.45:
+        return "moderate confidence in price increase"
+    elif confidence > 0.35:
+        return "low confidence in price increase"
+    else:
+        return "no confidence in price increase"
 
 
 def crypto_narrative_agent(state: AgentState):
@@ -25,7 +39,7 @@ def crypto_narrative_agent(state: AgentState):
     """
     data = state["data"]
     symbols = data["symbols"]  # List of crypto symbols to analyze
-    print(f"\nAnalyzing symbols: {symbols}")
+    # print(f"\nAnalyzing symbols: {symbols}")
 
     analysis_data = {}
     narrative_analysis = {}
@@ -33,21 +47,21 @@ def crypto_narrative_agent(state: AgentState):
     # Get only the specified coins data
     progress.update_status("crypto_narrative_agent", None, "Fetching cryptocurrency data")
     coins = get_coins(symbols)  # 只获取指定的币种数据
-    print(f"Fetched {len(coins)} coins for analysis")
+    # print(f"Fetched {len(coins)} coins for analysis")
 
     # Get model predictions for the specified coins
     progress.update_status("crypto_narrative_agent", None, "Running ML model predictions")
     predictions_df = predict_from_coin_data(coins)
-    print(f"\nPredictions DataFrame shape: {predictions_df.shape}")
-    print("Predictions DataFrame head:")
-    print(predictions_df.head())
+    # print(f"\nPredictions DataFrame shape: {predictions_df.shape}")
+    # print("Predictions DataFrame head:")
+    # print(predictions_df.head())
 
     for symbol in symbols:
-        print(f"\nProcessing symbol: {symbol}")
+        # print(f"\nProcessing symbol: {symbol}")
         # Find the coin data for this symbol
         coin_data = next((coin for coin in coins if coin.symbol == symbol), None)
         if not coin_data:
-            print(f"Symbol {symbol} not found in coins data")
+            # print(f"Symbol {symbol} not found in coins data")
             progress.update_status("crypto_narrative_agent", symbol, "Symbol not found")
             continue
 
@@ -55,12 +69,12 @@ def crypto_narrative_agent(state: AgentState):
         symbol_prediction = predictions_df[predictions_df['symbol'] == symbol].iloc[0] if len(predictions_df[predictions_df['symbol'] == symbol]) > 0 else None
         
         if symbol_prediction is None:
-            print(f"No prediction available for symbol {symbol}")
+            # print(f"No prediction available for symbol {symbol}")
             progress.update_status("crypto_narrative_agent", symbol, "No prediction available")
             continue
 
-        print(f"Found prediction for {symbol}:")
-        print(symbol_prediction)
+        # print(f"Found prediction for {symbol}:")
+        # print(symbol_prediction)
 
         # Map prediction to signal
         if symbol_prediction['predicted_label'] == 1:
@@ -70,7 +84,7 @@ def crypto_narrative_agent(state: AgentState):
 
         analysis_data[symbol] = {
             "signal": signal,
-            "confidence": float(symbol_prediction['confidence']),
+            "confidence": get_confidence_level(float(symbol_prediction['confidence'])),
             "model_prediction": {
                 "predicted_label": int(symbol_prediction['predicted_label']),
                 "confidence": float(symbol_prediction['confidence'])
@@ -93,8 +107,8 @@ def crypto_narrative_agent(state: AgentState):
 
         progress.update_status("crypto_narrative_agent", symbol, "Done")
 
-    print("\nFinal narrative analysis:")
-    print(json.dumps(narrative_analysis, indent=2))
+    # print("\nFinal narrative analysis:")
+    # print(json.dumps(narrative_analysis, indent=2))
 
     # Wrap results in a single message for the chain
     message = HumanMessage(content=json.dumps(narrative_analysis), name="crypto_narrative_agent")
@@ -165,23 +179,32 @@ def generate_narrative_output(
         [
             (
                 "system",
-                """You are a Crypto Analysis AI agent, making investment decisions using these principles:
-            1. Analyze ML model predictions for technical and market indicators
-            2. Consider model confidence levels in decision making
-            3. Provide comprehensive reasoning based on model outputs
-            4. Use a balanced, analytical voice in your explanation
-            
-            When providing your reasoning, be thorough and specific by:
-            1. Explaining the model's prediction and confidence level
-            2. Highlighting key factors that influenced the model's decision
-            3. Providing quantitative evidence with precise numbers
-            4. Using a balanced, analytical voice in your explanation
-            
-            For example, if bullish: "The ML model predicts a bullish signal with 85% confidence. This is supported by strong technical indicators and positive market metrics..."
-            For example, if bearish: "The ML model indicates a bearish signal with 75% confidence, based on negative technical indicators and concerning market metrics..."
-                        
-            Return a rational recommendation: bullish, bearish, or neutral, with a confidence level (0-100) and thorough reasoning.
-            """,
+                """You are a Crypto Analysis AI agent. Your role is to interpret machine learning model outputs and current market data to generate investment signals in the cryptocurrency market. Follow these principles:
+
+                    1. Consider both the model's prediction (`predicted_label`) and its **confidence in price increase** (`confidence`, between 0 and 1).
+                    2. If `predicted_label` is 1, the model predicts a potential price increase. Otherwise, the model predicts no price increase.
+                    3. Express **confidence in price increase** using semantic descriptors only (not numeric values):
+                        - confidence > 0.7 → "high confidence in price increase"
+                        - 0.45 < confidence ≤ 0.7 → "moderate confidence in price increase"
+                        - 0.35 < confidence ≤ 0.45 → "low confidence in price increase"
+                        - confidence ≤ 0.35 → model predicts no price increase, return "no confidence in price increase"
+
+                    4. The model is conservative when predicting price increases. Even moderate or low confidence signals should be interpreted with caution.
+                    5. Use a balanced, analytical, and professional tone. Avoid exaggeration or overconfidence.
+
+                When composing your response:
+                - Clearly state the model's directional prediction (bullish, bearish, or neutral)
+                - Describe **confidence in price increase** using one of the approved phrases
+                - Explain the rationale behind the prediction using the data provided in `current_market_data` and `analysis_data`
+                - Highlight any uncertainty or signal weakness when applicable
+
+                ### Output strictly in the following JSON format:
+                {{
+                    "signal": "bullish" or "bearish" or "neutral",
+                    "confidence": "high confidence in price increase" or "moderate confidence in price increase" or "low confidence in price increase" or "no confidence in price increase",
+                    "reasoning": "string"
+                }}
+                """
             ),
             (
                 "human",
@@ -192,14 +215,7 @@ def generate_narrative_output(
 
             Model Analysis Data:
             {analysis_data}
-
-            Return JSON exactly in this format:
-            {{
-              "signal": "bullish" or "bearish" or "neutral",
-              "confidence": float (0-100),
-              "reasoning": "string"
-            }}
-            """,
+            """
             )
         ]
     )
@@ -211,7 +227,7 @@ def generate_narrative_output(
     })
 
     def create_default_narrative_signal():
-        return CryptoNarrativeSignal(signal="neutral", confidence=0.0, reasoning="Error in generating analysis; defaulting to neutral.")
+        return CryptoNarrativeSignal(signal="neutral", confidence="no confidence in price increase", reasoning="Error in generating analysis; defaulting to neutral.")
 
     return call_llm(
         prompt=prompt,
@@ -220,4 +236,5 @@ def generate_narrative_output(
         pydantic_model=CryptoNarrativeSignal,
         agent_name="crypto_narrative_agent",
         default_factory=create_default_narrative_signal,
+        temperature=0.1
     )

@@ -156,7 +156,7 @@ def predict_from_coin_data(coins: List) -> pd.DataFrame:
     
     # === 5. 模型预测 ===
     y_pred = model.predict(template_df)
-    y_pred_label = (y_pred > 0.5).astype(int)
+    y_pred_label = (y_pred > 0.35).astype(int)
 
     # === 6. 将预测结果附加到 DataFrame 中 ===
     # Create result DataFrame with all data at once

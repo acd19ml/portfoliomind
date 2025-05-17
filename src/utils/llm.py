@@ -17,6 +17,7 @@ def call_llm(
     agent_name: Optional[str] = None,
     max_retries: int = 3,
     default_factory=None,
+    temperature: float = 0.7,
 ) -> T:
     """
     Makes an LLM call with retry logic, handling both JSON supported and non-JSON supported models.
@@ -29,6 +30,7 @@ def call_llm(
         agent_name: Optional name of the agent for progress updates
         max_retries: Maximum number of retries (default: 3)
         default_factory: Optional factory function to create default response on failure
+        temperature: Controls randomness in the output (default: 0.7)
 
     Returns:
         An instance of the specified Pydantic model
@@ -36,6 +38,10 @@ def call_llm(
 
     model_info = get_model_info(model_name)
     llm = get_model(model_name, model_provider)
+
+    # 设置temperature
+    if hasattr(llm, "temperature"):
+        llm.temperature = temperature
 
     # For non-JSON support models, we can use structured output
     if not (model_info and not model_info.has_json_mode()):
