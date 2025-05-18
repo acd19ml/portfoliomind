@@ -1,18 +1,25 @@
-# server.py
-from typing import Any, List, Dict, AsyncGenerator
-import asyncio
+# cryptomcp/server/main.py
+from typing import Any, List, Dict
 import json
 import websockets
+import logging
+import sys
 
 from fastmcp import FastMCP
-from src.main import run_portfoliomind
+
+# 配置日志
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stdout
+)
+logger = logging.getLogger(__name__)
 
 mcp = FastMCP(
     name="PortfolioMind",
     instructions="""
     This server provides cryptocurrency portfolio analysis tools.
     Use analyze_portfolio() for one-time analysis.
-    Use analyze_portfolio_stream() for real-time analysis with status updates.
     """,
     cors_origins=["*"],  # 允许所有来源的请求
     auth_required=False  # 暂时禁用认证
@@ -30,83 +37,58 @@ async def analyze_portfolio(
 ) -> Dict[str, Any]:
     """一次性分析接口，直接返回完整结果。"""
     try:
+        logger.debug(f"Starting portfolio analysis for symbols: {symbols}")
+        
         # 连接到模型调用 WebSocket
         uri = "ws://localhost:8000/ws/model"
-        async with websockets.connect(uri) as websocket:
-            # 发送分析请求
-            request = {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "analyzePortfolio",
-                "params": {
-                    "cryptos": symbols,
-                    "show_reasoning": show_reasoning
+        logger.debug(f"Connecting to WebSocket at {uri}")
+        
+        try:
+            async with websockets.connect(uri) as websocket:
+                # 发送分析请求
+                request = {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "analyzePortfolio",
+                    "params": {
+                        "cryptos": symbols,
+                        "show_reasoning": show_reasoning
+                    }
                 }
-            }
-            await websocket.send(json.dumps(request))
+                logger.debug(f"Sending request: {request}")
+                await websocket.send(json.dumps(request))
 
-            # 等待最终结果
-            while True:
-                response = await websocket.recv()
-                data = json.loads(response)
-                
-                if "result" in data:
-                    return {"success": True, "data": data["result"]}
-                elif "error" in data:
-                    return {"success": False, "error": data["error"]["message"]}
+                # 等待最终结果
+                while True:
+                    response = await websocket.recv()
+                    data = json.loads(response)
+                    logger.debug(f"Received response: {data}")
+                    
+                    if "result" in data:
+                        return {"success": True, "data": data["result"]}
+                    elif "error" in data:
+                        return {"success": False, "error": data["error"]["message"]}
+        except websockets.exceptions.ConnectionRefused:
+            logger.error("Failed to connect to WebSocket server")
+            return {"success": False, "error": "Model server is not running"}
+        except websockets.exceptions.WebSocketException as e:
+            logger.error(f"WebSocket error: {str(e)}")
+            return {"success": False, "error": f"WebSocket error: {str(e)}"}
 
     except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}", exc_info=True)
         return {"success": False, "error": str(e)}
 
-@mcp.tool()
-async def analyze_portfolio_stream(
-    symbols: List[str],
-    model_name: str = DEFAULT_MODEL,
-    model_provider: str = DEFAULT_PROVIDER,
-    show_reasoning: bool = True
-) -> AsyncGenerator[Dict[str, Any], None]:
-    """实时流式分析接口，返回进度更新和最终结果。"""
-    try:
-        # 连接到模型调用 WebSocket
-        uri = "ws://localhost:8000/ws/model"
-        async with websockets.connect(uri) as websocket:
-            # 发送分析请求
-            request = {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "analyzePortfolio",
-                "params": {
-                    "cryptos": symbols,
-                    "show_reasoning": show_reasoning
-                }
-            }
-            await websocket.send(json.dumps(request))
-
-            # 接收所有更新
-            while True:
-                response = await websocket.recv()
-                data = json.loads(response)
-                
-                if "method" in data and data["method"] == "analysis.progress":
-                    # 处理进度更新
-                    yield data["params"]
-                elif "result" in data:
-                    # 处理最终结果
-                    yield {"type": "result", "data": data["result"]}
-                    break
-                elif "error" in data:
-                    # 处理错误
-                    yield {"type": "error", "data": {"error": data["error"]["message"]}}
-                    break
-
-    except Exception as e:
-        yield {"type": "error", "data": {"error": str(e)}}
-
 if __name__ == "__main__":
-    mcp.run(
-        transport="streamable-http",
-        path="/mcp",
-        host="127.0.0.1",
-        port=9000,
-        log_level="debug"  # 使用 debug 级别以获取更多日志信息
-    )
+    logger.info("Starting PortfolioMind server...")
+    try:
+        mcp.run(
+            transport="streamable-http",
+            path="/mcp",
+            host="127.0.0.1",
+            port=9000,
+            log_level="debug"  # 使用 debug 级别以获取更多日志信息
+        )
+    except Exception as e:
+        logger.error(f"Failed to start server: {str(e)}", exc_info=True)
+        sys.exit(1)

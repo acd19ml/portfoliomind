@@ -1,0 +1,18 @@
+{
+    "mcpServers": {
+      "portfoliomind": {
+        "command": "C:\\Users\\Lenovo\\PycharmProjects\\portfoliomind\\venv\\Scripts\\python",
+        "args": [
+          "-m",
+          "fastmcp",
+          "run",
+          "C:\\Users\\Lenovo\\PycharmProjects\\portfoliomind\\cryptomcp\\server\\main.py:mcp"
+        ],
+        "description": "Cryptocurrency portfolio analysis MCP server",
+        "env": {
+          "PYTHONPATH": "C:\\Users\\Lenovo\\PycharmProjects\\portfoliomind"
+        },
+        "workingDirectory": "C:\\Users\\Lenovo\\PycharmProjects\\portfoliomind\\cryptomcp\\server"
+      }
+    }
+  } 

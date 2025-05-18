@@ -31,3 +31,4 @@ python-multipart==0.0.20
 mcp-server==0.1.4
 aiohttp==3.9.3
 websockets>=10.0 
+requests>=2.31.0
