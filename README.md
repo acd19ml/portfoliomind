@@ -1,4 +1,4 @@
-# Portfoliomind
+# crypto-investment-adviser
 
 AI-Agents that uses multiple LLM agents to analyze and trade crypto.
 
