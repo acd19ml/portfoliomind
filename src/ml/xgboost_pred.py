@@ -44,7 +44,7 @@ def predict_from_coin_data(coins: List) -> pd.DataFrame:
         })
     
     df = pd.DataFrame(data)
-    print(f"Initial DataFrame shape: {df.shape}")
+    # print(f"Initial DataFrame shape: {df.shape}")
     
     # Store original symbols before any transformations
     original_symbols = df['symbol'].copy()
@@ -62,8 +62,8 @@ def predict_from_coin_data(coins: List) -> pd.DataFrame:
     
     # Check for missing values
     missing_values = df.isnull().sum()
-    print("\nMissing values per column:")
-    print(missing_values[missing_values > 0])
+    # print("\nMissing values per column:")
+    # print(missing_values[missing_values > 0])
     
     # Fill missing values with appropriate defaults
     df['time'] = pd.Timestamp.now()  # Use current time for missing time values
@@ -76,7 +76,7 @@ def predict_from_coin_data(coins: List) -> pd.DataFrame:
     critical_fields = ['symbol', 'galaxy_score', 'alt_rank', 'market_cap_rank', 
                       'interactions_24h', 'social_volume_24h', 'social_dominance']
     df = df.dropna(subset=critical_fields)
-    print(f"After handling missing values shape: {df.shape}")
+    # print(f"After handling missing values shape: {df.shape}")
     
     if df.empty:
         raise ValueError("DataFrame is empty after preprocessing. Check the input data and missing values.")
@@ -111,9 +111,9 @@ def predict_from_coin_data(coins: List) -> pd.DataFrame:
     
     # Get the feature names from the model
     model_feature_names = model.feature_name()
-    print(f"\nModel expects {len(model_feature_names)} features")
-    print("\nModel feature names:")
-    print(model_feature_names[:10], "...")  # Print first 10 features
+    # print(f"\nModel expects {len(model_feature_names)} features")
+    # print("\nModel feature names:")
+    # print(model_feature_names[:10], "...")  # Print first 10 features
     
     # === 4. 独热编码 symbol ===
     # First, get the unique symbols from the model's feature names
@@ -122,8 +122,8 @@ def predict_from_coin_data(coins: List) -> pd.DataFrame:
         if feature.startswith('symbol_'):
             model_symbols.add(feature[7:])  # Remove 'symbol_' prefix
     
-    print("\nModel symbols:")
-    print(list(model_symbols)[:10], "...")  # Print first 10 symbols
+    # print("\nModel symbols:")
+    # print(list(model_symbols)[:10], "...")  # Print first 10 symbols
     
     # Filter symbols to only include those present in the model
     df['symbol'] = df['symbol'].apply(lambda x: x if x in model_symbols else 'UNKNOWN')
@@ -150,9 +150,9 @@ def predict_from_coin_data(coins: List) -> pd.DataFrame:
     # Create the final DataFrame using pd.concat
     template_df = pd.DataFrame(feature_dict, index=df.index)
     
-    print(f"\nFinal feature count: {len(template_df.columns)}")
-    print("\nInput symbols:")
-    print(df.index[:10], "...")  # Print first 10 input symbols
+    # print(f"\nFinal feature count: {len(template_df.columns)}")
+    # print("\nInput symbols:")
+    # print(df.index[:10], "...")  # Print first 10 input symbols
     
     # === 5. 模型预测 ===
     y_pred = model.predict(template_df)

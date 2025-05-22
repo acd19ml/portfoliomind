@@ -1,65 +1,93 @@
 # PortfolioMind
 
-PortfolioMind 是一个基于 AI 的加密货币投资组合分析系统，使用 WebSocket 进行实时进度更新和模型调用。
+PortfolioMind is an AI-powered cryptocurrency portfolio analysis system that provides real-time progress updates and model invocation using WebSocket technology.
 
-## 功能特点
+## Features
 
-- 实时进度更新：通过 WebSocket 实时显示分析进度
-- 多分析师支持：集成多个 AI 分析师进行综合分析
-- 风险管理系统：自动评估和管理投资风险
-- 实时市场数据：集成实时加密货币市场数据
-- 可扩展架构：支持添加新的分析师和模型
+- Real-time progress updates via WebSocket
+- Multiple AI analysts for comprehensive analysis
+- Automated risk management system
+- Integration with real-time cryptocurrency market data
+- Extensible architecture for adding new analysts and models
+- Backtesting capabilities
+- Docker support for easy deployment
+- Configurable parameters for trading and analysis
 
-## 系统架构
+## System Architecture
 
-系统由以下主要组件组成：
+The system consists of the following main components:
 
-1. **WebSocket 服务器**
-   - `/ws/progress` 端点：处理进度更新订阅
-   - `/ws/model` 端点：处理模型调用请求
+1. **WebSocket Server**
+   - `/ws/progress` endpoint: Handles progress update subscriptions
+   - `/ws/model` endpoint: Handles model invocation requests
 
-2. **进度更新机制**
-   - 实时状态更新：显示每个分析师的工作状态
-   - 进度广播：向所有订阅者广播更新
-   - 心跳机制：保持连接活跃
+2. **Progress Update Mechanism**
+   - Real-time status updates for each analyst
+   - Broadcasts progress to all subscribers
+   - Heartbeat mechanism to keep connections alive
 
-3. **分析系统**
-   - 多分析师工作流
-   - 风险管理系统 （待实现）
-   - 投资组合优化 （待实现）
+3. **Analysis System**
+   - Multi-analyst workflow
+   - Automated risk management (in development)
+   - Portfolio optimization (in development)
 
-## 安装
+## Prerequisites
 
-1. 克隆仓库：
+- Python 3.9 or higher
+- Docker and Docker Compose (optional)
+- API keys for:
+  - OpenAI
+  - Anthropic
+  - Google AI
+  - LunarCrush
+  - Groq
+  - DeepSeek
+
+## Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/acd19ml/portfoliomind.git
+   cd portfoliomind
+   ```
+
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Create a `.env` file from the example:
+   ```bash
+   cp .env.example .env
+   # Edit the .env file to add your API keys
+   ```
+
+   Example `.env` variables:
+   ```env
+   OPENAI_API_KEY=your_openai_api_key
+   ANTHROPIC_API_KEY=your_anthropic_api_key
+   GOOGLE_API_KEY=your_google_api_key
+   LUNARCRUSH_API_KEY=your_lunarcrush_api_key
+   GROQ_API_KEY=your-groq-api-key
+   DEEPSEEK_API_KEY=your-deepseek-api-key
+   ```
+
+## Usage
+
+### Command Line Options
+
+- `--cryptos`: Comma-separated list of crypto symbols (e.g., BTC,ETH,SOL)
+- `--show-reasoning`: Show reasoning from each agent
+
+### Running the Main Program
+
+To run the main program:
 ```bash
-git clone https://github.com/yourusername/portfoliomind.git
-cd portfoliomind
+python -m src.main --cryptos BTC,ETH,SOL
 ```
 
-2. 安装依赖：
-```bash
-pip install -r requirements.txt
-```
+### Using the Client in Python
 
-3. 配置环境变量：
-```bash
-cp .env.example .env
-# 编辑 .env 文件，添加必要的 API 密钥
-```
-
-## 使用方法
-
-1. 启动服务器：
-```bash
-python -m jsonrpc.server
-```
-
-2. 运行客户端：
-```bash
-python -m cryptomcp.client.main
-```
-
-3. 分析投资组合：
 ```python
 from cryptomcp.client.main import PortfolioAnalysisClient
 
@@ -71,42 +99,40 @@ async def analyze():
     await client.close()
 ```
 
-## 进度更新
+## Development
 
-系统提供实时进度更新，包括：
+### Adding a New Analyst
 
-- 分析师状态：显示每个分析师的工作状态
-- 加密货币分析：显示当前正在分析的加密货币
-- 完成状态：显示分析完成的百分比
-- 错误报告：实时显示任何错误或警告
+1. Create a new analyst module in `src/agents`.
+2. Implement the required interfaces.
+3. Register the analyst in `src/utils/analysts.py`.
 
-## 开发
+### Adding a New Model
 
-### 添加新的分析师
+1. Add the new model configuration in `src/llm/models.py`.
+2. Implement the model interface.
+3. Update the model selection logic as needed.
 
-1. 在 `src/agents` 目录下创建新的分析师模块
-2. 实现必要的接口
-3. 在 `src/utils/analysts.py` 中注册分析师
+## Contribution
 
-### 添加新的模型
+Contributions are welcome! Please submit Pull Requests and Issues.
 
-1. 在 `src/llm/models.py` 中添加新的模型配置
-2. 实现模型接口
-3. 更新模型选择逻辑
-
-## 贡献
-
-欢迎提交 Pull Request 和 Issue。
-
-## 许可证
+## License
 
 MIT License
+
+## Progress Updates
+
+The system provides real-time progress updates, including:
+
+- Analyst status: Displays the status of each analyst's work
+- Crypto analysis: Shows the current crypto being analyzed
+- Completion status: Displays the percentage of analysis completed
+- Error report: Displays any errors or warnings in real-time
 
 ## Features
 
 - Multiple AI agents with different investment strategies
-- Real-time stock analysis and trading signals
-- Backtesting capabilities
 - Docker support for easy deployment
 - Configurable parameters for trading and analysis
 
@@ -120,7 +146,6 @@ MIT License
   - Google AI
 
 ## Installation
-
 
 1. Install dependencies:
 ```bash
@@ -143,7 +168,6 @@ DEEPSEEK_API_KEY=your-deepseek-api-key
 ```
 
 ## Usage
-
 
 ### Command Line Options
 
