@@ -5,17 +5,36 @@ _ = load_dotenv()
 
 # User profile configuration
 profile = {
-    "name": "John",
-    "full_name": "John Doe",
-    "user_profile_background": "Senior software engineer leading a team of 5 developers",
+    "_id": "0x4547808f6586491c44b41a7833893912383d78c9",
+    "tokens": [
+        {
+            "symbol": "BTC",
+            "balance": 1.23,
+            "network": "other networks",
+            "in_wallet": False
+        },
+        {
+            "symbol": "ETH",
+            "balance": 0,
+            "network": "ethereum",
+            "in_wallet": True
+        },
+        {
+            "symbol": "WETH",
+            "balance": 0,
+            "network": "ethereum",
+            "in_wallet": True
+        }
+    ],
+    "risk_level": "high"
 }
 
 # Email triage rules
 prompt_instructions = {
     "triage_rules": {
-        "ignore": "Marketing newsletters, spam emails, mass company announcements",
-        "notify": "Team member out sick, build system notifications, project status updates",
-        "respond": "Direct questions from team members, meeting requests, critical bug reports",
+        "high_risk": "Recommend from the top 5000 cryptocurrencies by market capitalization",
+        "medium_risk": "Recommend from the top 1000 cryptocurrencies by market capitalization",
+        "low_risk": "Recommend from the top 100 cryptocurrencies by market capitalization",
     },
     "agent_instructions": "Use these tools when appropriate to help manage John's tasks efficiently."
 }

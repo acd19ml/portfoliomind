@@ -23,6 +23,7 @@ def get_coins(symbols: List[str] = None) -> List:
     
     return all_coins
 
+
 def get_all_coins() -> List:
     """
     Fetch cryptocurrency data from LunarCrush API.

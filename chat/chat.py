@@ -7,10 +7,11 @@ from langgraph.types import Command
 from typing import Literal, Dict, List
 from chat.models import Message
 from chat.prompts import triage_system_prompt, triage_user_prompt, agent_system_prompt
-from chat.tools import write_email, schedule_meeting, check_calendar_availability
+from chat.tools import analyze_prediction
 from langgraph.graph import add_messages
 from typing_extensions import TypedDict, Annotated
-from config import profile, prompt_instructions
+from chat.config import profile, prompt_instructions
+from chat.models import Router
 
 _ = load_dotenv()
 
@@ -85,19 +86,12 @@ def triage_router(state: State) -> Command[Literal["response_agent", "__end__"]]
     return Command(goto=goto, update=update)
 
 # Create the agent
-tools = [write_email, schedule_meeting, check_calendar_availability]
+tools = [analyze_prediction]
 agent = create_react_agent(
     "openai:gpt-4o",
     tools=tools,
     prompt=create_prompt,
 )
-
-# Create the email processing graph
-email_agent = StateGraph(State)
-email_agent = email_agent.add_node(triage_router)
-email_agent = email_agent.add_node("response_agent", agent)
-email_agent = email_agent.add_edge(START, "triage_router")
-email_agent = email_agent.compile()
 
 def process_email(email_input: dict, conversation_history: List[Message] = None) -> Dict:
     """

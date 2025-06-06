@@ -1,6 +1,6 @@
 import os
 import pytest
-from src.tools.crypto_api import get_coins
+from src.tools.api import get_coins
 
 
 def test_get_coins():

@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"  # JSONRPC API
+      - "8008:8008"  # Chat API
+    env_file:
+      - .env
+    depends_on:
+      - mongodb
+    networks:
+      - portfoliomind-network
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    env_file:
+      - .env.mongodb
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - portfoliomind-network
+    restart: unless-stopped
+
+networks:
+  portfoliomind-network:
+    driver: bridge
+
+volumes:
+  mongodb_data: 

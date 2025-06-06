@@ -2,13 +2,44 @@ import pandas as pd
 import lightgbm as lgb
 import os
 from typing import List
-from src.tools.crypto_api import get_coins
+from src.tools.api import get_coins
 
 # === 1. 加载模型 ===
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'lgbm_model.txt')
 if not os.path.exists(MODEL_PATH):
     raise FileNotFoundError(f"模型文件不存在：{MODEL_PATH}")
 model = lgb.Booster(model_file=MODEL_PATH)
+
+def get_top_market_cap_coins(n: int) -> List:
+    """
+    获取市值排名前N的加密货币列表
+    
+    Args:
+        n: 市值排名阈值，返回market_cap_rank <= n的加密货币
+            如果n为0，则返回所有加密货币
+        
+    Returns:
+        包含市值排名前N的加密货币列表，如果n为0则返回所有加密货币
+    """
+    try:
+        # 获取所有加密货币数据
+        coins = get_coins()
+        
+        # 如果n为0，返回所有加密货币
+        if n == 0:
+            return coins
+            
+        # 筛选市值排名前N的加密货币
+        top_coins = [coin for coin in coins if coin.market_cap_rank <= n]
+        
+        # 按市值排名排序
+        top_coins.sort(key=lambda x: x.market_cap_rank)
+        
+        return top_coins
+        
+    except Exception as e:
+        print(f"Error getting top market cap coins: {e}")
+        return []
 
 def predict_from_coin_data(coins: List) -> pd.DataFrame:
     """
@@ -58,7 +89,7 @@ def predict_from_coin_data(coins: List) -> pd.DataFrame:
         'market_dominance', 'market_dominance_prev', 'volatility'
     ]
     df = df[feature_cols].copy()
-    print(f"After feature selection shape: {df.shape}")
+    # print(f"After feature selection shape: {df.shape}")
     
     # Check for missing values
     missing_values = df.isnull().sum()
@@ -173,10 +204,37 @@ def predict_from_coin_data(coins: List) -> pd.DataFrame:
     # 按置信度降序排序
     result_df = result_df.sort_values(by='confidence', ascending=False)
     
-    print("\nPrediction results:")
-    print(result_df.head())
+    # print("\nPrediction results:")
+    # print(result_df.head())
 
     return result_df
+
+def get_top3_predictions(n: int) -> pd.DataFrame:
+    """
+    从LunarCrush获取市值排名前N的加密货币，并进行预测，返回置信度最高的前3个预测结果
+    
+    Args:
+        n: 市值排名阈值，返回market_cap_rank <= n的加密货币
+            如果n为0，则返回所有加密货币
+        
+    Returns:
+        包含前3个预测结果的DataFrame，按置信度降序排序
+    """
+    try:
+        # 获取n个加密货币数据
+        coins = get_top_market_cap_coins(n)
+        
+        # 进行预测
+        predictions_df = predict_from_coin_data(coins)
+        
+        # 按置信度降序排序并获取前3个结果
+        top_predictions = predictions_df.sort_values(by='confidence', ascending=False).head(3)
+        
+        return top_predictions
+        
+    except Exception as e:
+        print(f"Error getting top predictions: {e}")
+        return pd.DataFrame(columns=['symbol', 'predicted_label', 'confidence'])
 
 # 示例使用
 if __name__ == "__main__":

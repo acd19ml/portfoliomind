@@ -24,9 +24,9 @@ load_dotenv()
 init(autoreset=True)
 
 
-##### Run the Hedge Fund #####
-def run_portfoliomind(
-    cryptos: list[str],
+def run_analyst(
+    cryptos: list[str] = None,
+    address: str = None,
     show_reasoning: bool = False,
     selected_analysts: list[str] = [],
     model_name: str = "gpt-4o",
@@ -35,8 +35,29 @@ def run_portfoliomind(
     """
     Runs the portfolio analysis, emitting status updates to an asyncio.Queue.
     Catches and surfaces any internal exceptions to avoid unhandled TaskGroup errors.
+    
+    Args:
+        cryptos: List of cryptocurrencies to analyze. Mutually exclusive with address.
+        address: User's wallet address to analyze. Mutually exclusive with cryptos.
+        show_reasoning: Whether to show the reasoning process.
+        selected_analysts: List of analysts to use. If not provided, will be determined by input type.
+        model_name: Name of the model to use.
+        model_provider: Provider of the model.
     """
     status_queue: asyncio.Queue = asyncio.Queue()
+
+    # 验证输入参数
+    if cryptos is None and address is None:
+        raise ValueError("Either cryptos or address must be provided")
+    if cryptos is not None and address is not None:
+        raise ValueError("cryptos and address cannot be provided simultaneously")
+
+    # 根据输入类型确定使用的分析师
+    if not selected_analysts:
+        if cryptos is not None:
+            selected_analysts = ["crypto_narrative"]  # 使用配置中的key
+        else:  # address is not None
+            selected_analysts = ["investment_recommendation"]  # 使用配置中的key
 
     # 状态更新回调：将每条更新放入队列
     def status_handler(agent_name: str, crypto: str, status: str):
@@ -59,22 +80,30 @@ def run_portfoliomind(
         workflow = create_workflow(selected_analysts)
         agent = workflow.compile()
 
+        # 准备输入数据
+        input_data = {
+            "messages": [
+                HumanMessage(content="Make trading decisions based on the provided data."),
+            ],
+            "data": {
+                "analyst_signals": {},
+            },
+            "metadata": {
+                "show_reasoning": show_reasoning,
+                "model_name": model_name,
+                "model_provider": model_provider,
+            },
+        }
+
+        # 根据输入类型添加相应的数据
+        if cryptos is not None:
+            input_data["data"]["symbols"] = cryptos
+        else:  # address is not None
+            input_data["data"]["address"] = address
+
         # 执行分析，并捕获所有内部异步任务异常
         try:
-            final_state = agent.invoke({
-                "messages": [
-                    HumanMessage(content="Make trading decisions based on the provided data."),
-                ],
-                "data": {
-                    "symbols": cryptos,
-                    "analyst_signals": {},
-                },
-                "metadata": {
-                    "show_reasoning": show_reasoning,
-                    "model_name": model_name,
-                    "model_provider": model_provider,
-                },
-            })
+            final_state = agent.invoke(input_data)
 
         except Exception as invoke_err:
             # 如果 invoke 过程中有任何子任务抛错，捕获并推送 error 更新
@@ -162,6 +191,7 @@ async def process_queue(queue):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the hedge fund trading system")
     parser.add_argument("--cryptos", type=str, required=True, help="Comma-separated list of crypto symbols")
+    parser.add_argument("--address", type=str, required=True, help="User's wallet address")
     parser.add_argument("--show-reasoning", action="store_true", help="Show reasoning from each agent")
     parser.add_argument("--show-agent-graph", action="store_true", help="Show the agent graph")
 
@@ -233,8 +263,9 @@ if __name__ == "__main__":
         save_graph_as_png(app, file_path)
 
     # Run the hedge fund
-    queue = run_portfoliomind(
+    queue = run_analyst(
         cryptos=cryptos,
+        address=args.address,
         show_reasoning=args.show_reasoning,
         selected_analysts=selected_analysts,
         model_name=model_choice,
