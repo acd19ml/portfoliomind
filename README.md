@@ -1,228 +1,113 @@
-# PortfolioMind
+# PortfolioMind System
 
-PortfolioMind 是一个智能投资组合分析和管理系统，提供投资组合分析、风险评估和投资建议等功能。
+## Installation & Startup
 
-## 系统架构
+### 1. Install Dependencies (Python)
 
-系统由以下主要组件组成：
-
-1. **FastAPI 后端服务** (`jsonrpc/`)
-   - 提供 JSON-RPC API 接口
-   - 处理投资组合分析请求
-   - 管理用户偏好和投资建议
-
-2. **Go 客户端服务** (`src/`)
-   - 处理用户请求
-   - 与 FastAPI 后端通信
-   - 提供用户界面和交互
-
-## 快速开始
-
-### 环境要求
-
-- Python 3.8+
-- Go 1.16+
-- MongoDB 4.4+
-- Docker (可选)
-
-### 安装依赖
-
-1. 安装 Python 依赖：
 ```bash
+# Create and activate a virtual environment (optional but recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install Python dependencies
 pip install -r requirements.txt
 ```
 
-2. 安装 Go 依赖：
+### 2. Start the Services (Locally)
+
 ```bash
-go mod download
-```
+# Start both Chat and JSONRPC services using the unified runner
+python run_servers.py
 
-### 配置
-
-1. 创建 `.env` 文件并配置必要的环境变量：
-```env
-MONGODB_URL=mongodb://localhost:27017
-MONGODB_DB=portfoliomind
-```
-
-2. 配置 API 密钥（在 `config.py` 中）：
-```python
-API_KEYS = {
-    "your_api_key": "your_secret"
-}
-```
-
-### 启动服务
-
-1. 启动 FastAPI 后端服务：
-```bash
-# Windows
+# Or, start them individually (in separate terminals):
+python chat/run.py
 python jsonrpc/run.py
-
-# Linux/WSL2
-python3 jsonrpc/run.py
 ```
 
-2. 启动 Go 客户端服务：
+### 3. Start with Docker
+
 ```bash
-# 在 WSL2 中运行
-go run src/main.go
+# Build and run all services with Docker Compose
+# (Make sure your .env file is configured if needed)
+docker-compose up --build
 ```
 
-## API 文档
+---
 
-### 投资组合分析接口
-
-#### 1. 分析投资组合
-
-```http
-POST /model
-Content-Type: application/json
-
-{
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "analyze_portfolio",
-    "params": {
-        "address": "user_address",
-        "show_reasoning": true
-    }
-}
-```
-
-响应示例：
-```json
-{
-    "jsonrpc": "2.0",
-    "id": 1,
-    "result": [
-        {
-            "token": "SUT",
-            "usd": 400.0
-        },
-        {
-            "token": "FARTCOIN",
-            "usd": 350.0
-        },
-        {
-            "token": "TRUMP",
-            "usd": 250.0
-        }
-    ]
-}
-```
-
-#### 2. 获取投资建议
-
-```http
-POST /model
-Content-Type: application/json
-
-{
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "get_investment_advice",
-    "params": {
-        "address": "user_address",
-    }
-}
-```
-
-响应示例：
-```json
-{
-    "jsonrpc": "2.0",
-    "id": 1,
-    "result": {
-        "TKX": {
-            "investment_amount": 400.0
-        },
-        "SUT": {
-            "investment_amount": 350.0
-        },
-        "VIRTUAL": {
-            "investment_amount": 250.0
-        }
-    }
-}
-```
-
-### 健康检查接口
-
-```http
-GET /health
-```
-
-响应示例：
-```json
-{
-    "status": "healthy",
-    "mongodb": "connected"
-}
-```
-
-## 开发指南
-
-### 项目结构
+## System Architecture
 
 ```
-portfoliomind/
-├── jsonrpc/              # FastAPI 后端服务
-│   ├── routes/          # API 路由
-│   ├── services/        # 业务逻辑
-│   └── server.py        # 服务器配置
-├── src/                 # Go 客户端服务
-│   ├── main.go         # 主程序
-│   └── handlers/       # 请求处理器
-└── tests/              # 测试文件
+┌──────────────────────────────┐
+│        React Frontend        │
+│   (react frontend server)    │
+└─────────────┬────────────────┘
+              │ HTTP (3000)
+              ▼
+┌──────────────────────────────┐
+│        Go Backend Server     │
+│     (go backend server)      │
+│  Listen: 0.0.0.0:8080        │
+│ 1. Receives frontend requests│
+│ 2. Calls Chat Service        │
+│ 3. Calls JSONRPC Service     │
+└───────┬─────────┬────────────┘
+        │         │
+        ▼         ▼
+┌──────────────────────────────┐      ┌──────────────────────────────┐
+│         Chat Service         │      │      JSONRPC Service         │
+│ (chat/server.py, FastAPI)    │      │ (jsonrpc/server.py, FastAPI) │
+│ Listen: 0.0.0.0:8008         │      │ Listen: 0.0.0.0:8000         │
+└─────────────┬────────────────┘      └─────────────┬────────────────┘
+              │                                     │
+              ▼                                     ▼
+┌──────────────────────────────┐      ┌──────────────────────────────┐
+│       chat/tools.py          │      │         MongoDB              │
+│  (internal tool, requests    │      │ (public or container)        │
+│   JSONRPC Service)           │      └──────────────────────────────┘
+└──────────────────────────────┘
 ```
 
-### 添加新功能
+### Component Descriptions
 
-1. 在 `jsonrpc/routes/` 中添加新的路由
-2. 在 `jsonrpc/services/` 中实现业务逻辑
-3. 在 `src/handlers/` 中添加对应的客户端处理
+- **React Frontend**: Provides the user interface. All user actions are sent to the Go backend via HTTP requests. *(Note: The React frontend service is not included in this repository.)*
+- **Go Backend Server**: Acts as a middle layer between the frontend and Python services. Handles business aggregation, permission checks, and forwards requests to the Chat and JSONRPC services. *(Note: The Go backend service is not included in this repository.)*
+- **Chat Service**: Handles natural language conversations and streaming AI responses. Internally uses `chat/tools.py` to request analysis from the JSONRPC service.
+- **JSONRPC Service**: Handles investment analysis, portfolio analysis, and other business logic. Directly accesses MongoDB for data storage and retrieval.
+- **MongoDB**: Stores all business data.
 
-### 测试
+### Agent Implementation
 
-运行 Python 测试：
-```bash
-pytest tests/
-```
+- The core agent logic, including analyst orchestration and business analysis, is implemented in the `src` directory of this repository.
 
-运行 Go 测试：
-```bash
-go test ./...
-```
+### Typical Request Flow
 
-## 故障排除
+1. The user initiates an action in the React frontend.
+2. The Go backend receives the request and, based on business logic, forwards it to the Chat or JSONRPC service.
+3. If the Chat service needs analysis, it uses `chat/tools.py` to request the JSONRPC service.
+4. The JSONRPC service processes the analysis request, accesses MongoDB for data, and returns the result.
+5. The Go backend returns the result to the frontend, which displays it to the user.
 
-### 常见问题
+---
 
-1. **连接被拒绝**
-   - 检查 FastAPI 服务是否正在运行
-   - 确认端口 8000 未被占用
-   - 检查防火墙设置
+## Project Structure
 
-2. **MongoDB 连接错误**
-   - 确认 MongoDB 服务正在运行
-   - 检查连接字符串是否正确
-   - 验证数据库用户权限
+- `src/` - Core agent implementation logic (analyst orchestration, business analysis, etc.)
+- `chat/` - Python Chat service (FastAPI)
+- `jsonrpc/` - Python JSONRPC service (FastAPI)
+- `run_servers.py` - Unified entry to run both Python services
+- `config.py` - Centralized configuration
+- `README.md` - Project documentation
 
-3. **API 认证错误**
-   - 检查 API 密钥配置
-   - 确认请求头中包含正确的认证信息
+> **Note:** The Go backend and React frontend services are not included in this repository.
 
-## 贡献指南
+## Deployment
 
-1. Fork 项目
-2. 创建特性分支
-3. 提交更改
-4. 推送到分支
-5. 创建 Pull Request
+- All services can be containerized using Docker.
+- MongoDB can be a public instance or a container.
+- Environment variables (such as `MONGODB_URI`) should be set for correct service connectivity.
 
-## 许可证
+## Contact
 
-MIT License
+For more information, please refer to the source code or contact the maintainers.
 
 

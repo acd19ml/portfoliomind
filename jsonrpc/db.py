@@ -2,16 +2,16 @@ from fastapi import HTTPException
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 import logging
+import sys
+import os
+
+# 将项目根目录添加到 sys.path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from config import config
 
 # 配置日志
 logger = logging.getLogger(__name__)
-
-# MongoDB 配置
-MONGODB_URL = 'mongodb://34.133.224.209:27017/'
-MONGODB_DB = 'portfoliomind'
-MONGODB_TIMEOUT_MS = 5000  # 5 秒超时
-MONGODB_RETRY_WRITES = True
-MONGODB_RETRY_READS = True
 
 # MongoDB 连接
 mongo_client = None
@@ -22,16 +22,16 @@ def init_mongodb():
     global mongo_client, mongo_db
     try:
         mongo_client = MongoClient(
-            MONGODB_URL,
-            serverSelectionTimeoutMS=MONGODB_TIMEOUT_MS,
-            retryWrites=MONGODB_RETRY_WRITES,
-            retryReads=MONGODB_RETRY_READS
+            config.MONGODB_URI,
+            serverSelectionTimeoutMS=5000,
+            retryWrites=True,
+            retryReads=True
         )
         
         # 测试连接
         mongo_client.admin.command('ping')
-        mongo_db = mongo_client[MONGODB_DB]
-        logger.info("MongoDB connected successfully")
+        mongo_db = mongo_client[config.MONGODB_DB]
+        logger.info(f"MongoDB connected successfully to {config.MONGODB_DB}")
         return True
     except (ConnectionFailure, ServerSelectionTimeoutError) as e:
         logger.error(f"MongoDB connection failed: {str(e)}")

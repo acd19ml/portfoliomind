@@ -16,7 +16,7 @@ from chat.models import Router
 _ = load_dotenv()
 
 # Initialize LLM
-llm = init_chat_model("openai:gpt-4o-mini")
+llm = init_chat_model("deepseek-chat")
 llm_router = llm.with_structured_output(Router)
 
 class State(TypedDict):
@@ -88,7 +88,7 @@ def triage_router(state: State) -> Command[Literal["response_agent", "__end__"]]
 # Create the agent
 tools = [analyze_prediction]
 agent = create_react_agent(
-    "openai:gpt-4o",
+    "deepseek-chat",
     tools=tools,
     prompt=create_prompt,
 )

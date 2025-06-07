@@ -1,5 +1,16 @@
 from langchain_core.tools import tool
 import httpx
+import sys
+import os
+
+# 将项目根目录添加到 sys.path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from config import config
+
+# 根据环境确定 JSON-RPC 服务器的主机
+# 如果在容器内，并且 HOST 是 0.0.0.0，则应使用 localhost 连接同一容器内的服务
+jsonrpc_host = "localhost" if config.JSONRPC_HOST == "0.0.0.0" else config.JSONRPC_HOST
 
 @tool
 async def analyze_prediction(cryptos: list[str], show_reasoning: bool = False) -> dict:
@@ -14,7 +25,7 @@ async def analyze_prediction(cryptos: list[str], show_reasoning: bool = False) -
     Returns:
         The analysis result as a dictionary containing trading recommendations
     """
-    url = "http://localhost:8000/model"
+    url = f"http://{jsonrpc_host}:{config.JSONRPC_PORT}/model"
     request = {
         "jsonrpc": "2.0",
         "id": 1,
@@ -60,7 +71,7 @@ async def analyze_prediction(cryptos: list[str], show_reasoning: bool = False) -
         import socket
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect(("localhost", 8000))
+            s.connect((jsonrpc_host, config.JSONRPC_PORT))
             conn_status = "Connection test successful"
             s.close()
         except Exception as conn_e:
@@ -85,7 +96,7 @@ async def analyze_portfolio(address: str, show_reasoning: bool = False) -> dict:
     Returns:
         The analysis result as a dictionary containing investment recommendations
     """
-    url = "http://localhost:8000/model"
+    url = f"http://{jsonrpc_host}:{config.JSONRPC_PORT}/model"
     request = {
         "jsonrpc": "2.0",
         "id": 1,
@@ -124,7 +135,7 @@ async def analyze_portfolio(address: str, show_reasoning: bool = False) -> dict:
         import socket
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect(("localhost", 8000))
+            s.connect((jsonrpc_host, config.JSONRPC_PORT))
             conn_status = "Connection test successful"
             s.close()
         except Exception as conn_e:

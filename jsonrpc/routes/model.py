@@ -59,8 +59,8 @@ async def http_model(request: Request):
             selected_analysts = [selected_analysts]
 
         # 获取模型配置
-        model_name = params.get("model_name", "gpt-4o")
-        model_provider = params.get("model_provider", "OpenAI")
+        model_name = params.get("model_name", "deepseek-chat")
+        model_provider = params.get("model_provider", "DeepSeek")
 
         try:
             queue = run_analyst(

@@ -29,8 +29,8 @@ def run_analyst(
     address: str = None,
     show_reasoning: bool = False,
     selected_analysts: list[str] = [],
-    model_name: str = "gpt-4o",
-    model_provider: str = "OpenAI",
+    model_name: str = "deepseek-chat",
+    model_provider: str = "DeepSeek",
 ) -> asyncio.Queue:
     """
     Runs the portfolio analysis, emitting status updates to an asyncio.Queue.
