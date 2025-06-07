@@ -91,7 +91,7 @@ docker-compose up --build
 
 ## Project Structure
 
-- `src/` - Core agent implementation logic (analyst orchestration, business analysis, etc.)
+- `src/` - Core agent implementation logic (analyst orchestration, business analysis etc.)
 - `chat/` - Python Chat service (FastAPI)
 - `jsonrpc/` - Python JSONRPC service (FastAPI)
 - `run_servers.py` - Unified entry to run both Python services
@@ -105,6 +105,11 @@ docker-compose up --build
 - All services can be containerized using Docker.
 - MongoDB can be a public instance or a container.
 - Environment variables (such as `MONGODB_URI`) should be set for correct service connectivity.
+
+## Prediction and Recommendation Results
+![image](https://github.com/user-attachments/assets/82d4a7cc-c22c-4fb8-ad29-fee31fb9c35a)
+![image](https://github.com/user-attachments/assets/ee435344-3569-47b6-a016-d03aadbba95d)
+
 
 ## Contact
 
