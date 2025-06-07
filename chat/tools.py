@@ -40,16 +40,6 @@ async def analyze_prediction(cryptos: list[str], show_reasoning: bool = False) -
             if "result" in data:
                 result = data["result"]
                 
-                # 检查结果是否为空
-                if result and isinstance(result, dict):
-                    # 检查结果是否包含BTC或ETH
-                    if "BTC" in result or "ETH" in result:
-                        return result
-                    else:
-                        print("WARNING: result does not contain expected crypto data")
-                else:
-                    print(f"WARNING: Empty or non-dict result: {result}")
-                
                 # 返回原始结果，即使可能为空
                 return result or {"error": "Empty analysis result"}
             elif "error" in data:
@@ -115,13 +105,6 @@ async def analyze_portfolio(address: str, show_reasoning: bool = False) -> dict:
             if "result" in data:
                 result = data["result"]
                 
-                if result and isinstance(result, dict):
-                    if "BTC" in result or "ETH" in result:
-                        return result
-                    else:
-                        print("WARNING: result does not contain expected crypto data")
-                else:
-                    print(f"WARNING: Empty or non-dict result: {result}")
                 
                 return result or {"error": "Empty analysis result"}
             elif "error" in data:
